@@ -27,6 +27,7 @@ class Application {
                 e.printStackTrace();
             }
         }));
+
         server.setExecutor(null); // creates a default executor
         server.start();
     }
