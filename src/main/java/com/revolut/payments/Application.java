@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 
-import com.revolut.payments.controllers.UserController;
+import com.revolut.payments.controllers.AccountController;
+import com.revolut.payments.controllers.TransferController;
 import com.revolut.payments.dto.ResponseDTO;
 import com.sun.net.httpserver.HttpServer;
 
@@ -14,10 +15,10 @@ class Application {
 
     public static void main(String[] args) throws IOException {
         final HttpServer server = startServer();
-        server.createContext("/users", (exchange -> {
-            final UserController userController = UserController.getInstance();
+        server.createContext("/account", exchange -> {
+            final AccountController accountController = AccountController.getInstance();
             try {
-                final ResponseDTO response = userController.handle(exchange);
+                final ResponseDTO response = accountController.handle(exchange);
                 exchange.sendResponseHeaders(200, response.toString().getBytes().length);
                 OutputStream output = exchange.getResponseBody();
                 output.write(response.toString().getBytes());
@@ -26,7 +27,20 @@ class Application {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }));
+        });
+        server.createContext("/transfer", exchange -> {
+            final TransferController transferController = TransferController.getInstance();
+            try {
+                final ResponseDTO response = transferController.handle(exchange);
+                exchange.sendResponseHeaders(200, response.toString().getBytes().length);
+                OutputStream output = exchange.getResponseBody();
+                output.write(response.toString().getBytes());
+                output.flush();
+                exchange.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
 
         server.setExecutor(null); // creates a default executor
         server.start();

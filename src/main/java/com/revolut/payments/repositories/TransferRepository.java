@@ -1,5 +1,6 @@
 package com.revolut.payments.repositories;
 
+import com.revolut.payments.dto.TransferRequestDTO;
 import com.revolut.payments.models.Transfer;
 
 import java.util.Collections;
@@ -23,10 +24,20 @@ public class TransferRepository {
         return Collections.singleton(MEMORY_STORE.get("KEY"));
     }
 
-    public Transfer create() {
-        final String id = UUID.randomUUID().toString();
-        MEMORY_STORE.put("KEY", Transfer.builder().build());
-        return MEMORY_STORE.get("KEY");
+    public Transfer create(final TransferRequestDTO transferRequestDTO) {
+        final StringBuilder id = new StringBuilder();
+        while (MEMORY_STORE.containsKey(id.toString())) {
+            id.replace(0, id.length(), UUID.randomUUID().toString());
+        }
+        final Transfer transfer = new Transfer.Builder()
+                .setId(id.toString())
+                .setStatus("active")
+                .setSourceId(transferRequestDTO.getSourceId())
+                .setTransaction(transferRequestDTO.getTransaction())
+                .setDestinationId(transferRequestDTO.getDestinationId())
+                .build();
+
+        return MEMORY_STORE.put(transfer.getId(), transfer);
     }
 
     public Transfer update() {
