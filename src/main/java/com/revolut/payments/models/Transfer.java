@@ -1,7 +1,7 @@
 package com.revolut.payments.models;
 
 public class Transfer {
-    private String id;
+    private int id;
     private String status;
     private String sourceId;
     private String transaction;
@@ -14,7 +14,7 @@ public class Transfer {
         this.transaction = builder.transaction;
         this.destinationId = builder.destinationId;
     }
-    public String getId() {
+    public int getId() {
         return id;
     }
 
@@ -35,7 +35,7 @@ public class Transfer {
     }
 
     protected abstract static class TransferBuilder<B extends TransferBuilder<B, R>, R extends Transfer> {
-        protected String id;
+        protected int id;
         protected String status;
         protected String sourceId;
         protected String transaction;
@@ -43,7 +43,7 @@ public class Transfer {
 
         protected abstract B self();
 
-        public B setId(final String id) {
+        public B setId(final int id) {
             this.id = id;
             return self();
         }
@@ -72,6 +72,15 @@ public class Transfer {
     }
 
     public static final class Builder extends TransferBuilder<Builder, Transfer> {
+
+        public Builder() {}
+        public Builder(final Transfer old) {
+            this.id = old.getId();
+            this.status = old.getStatus();
+            this.sourceId = old.getSourceId();
+            this.transaction = old.getTransaction();
+            this.destinationId = old.getDestinationId();
+        }
 
         @Override
         protected Builder self() {

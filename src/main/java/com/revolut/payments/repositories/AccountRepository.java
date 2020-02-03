@@ -1,40 +1,60 @@
 package com.revolut.payments.repositories;
 
+import com.revolut.payments.dto.AccountRequestDTO;
 import com.revolut.payments.models.Account;
-
-import java.util.Collections;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 public class AccountRepository {
     private static AccountRepository instance;
-    private static final ConcurrentMap<String, Account> MEMORY_STORE = new ConcurrentHashMap<>();
+    private static final List<Account> MEMORY_STORE = new CopyOnWriteArrayList<>();
 
     private AccountRepository() {}
 
-    public Account fetchOne() {
-
-        return MEMORY_STORE.get("KEY");
+    public Account fetchOne(final int id) {
+        return MEMORY_STORE.get(id-1);
     }
 
-    public Set<Account> fetchMany() {
-        return Collections.singleton(MEMORY_STORE.get("KEY"));
+    public List<Account> fetchMany(final AccountRequestDTO request) {
+        final Object statusFilter = request.getFilter("status");
+        final Object balanceFilter = request.getFilter("balance");
+        return MEMORY_STORE.stream()
+                .filter(account -> statusFilter == null || Arrays.asList(statusFilter).contains(account.getStatus()))
+                .filter(account -> balanceFilter == null || Arrays.asList(balanceFilter).contains(account.getBalance()))
+                .collect(Collectors.toList());
     }
 
-    public Account create() {
-        final String id = UUID.randomUUID().toString();
-        MEMORY_STORE.put("KEY", Account.builder().build());
-        return MEMORY_STORE.get("KEY");
+    public Account create(final AccountRequestDTO request) {
+        //Adds null to reserve the element index and id.
+        MEMORY_STORE.add(null);
+        final int id = MEMORY_STORE.size();
+        final Account account = new Account.Builder()
+                .setId(id)
+                .setStatus("active")
+                .setBalance(request.getBalance())
+                .build();
+        MEMORY_STORE.add(id, account);
+        return account;
     }
 
-    public Account update() {
-        return MEMORY_STORE.get("KEY");
+    public Account update(final Account updated) {
+        final Account current = MEMORY_STORE.get(updated.getId());
+        if (current == null) {
+            return null;
+        }
+        MEMORY_STORE.add(updated.getId(), updated);
+        return current;
     }
 
-    public Account delete() {
-        return MEMORY_STORE.get("KEY");
+    public Account delete(final int id) {
+        final Account current = MEMORY_STORE.get(id);
+        if (current == null) {
+            return null;
+        }
+        MEMORY_STORE.add(id, new Account.Builder(current).setStatus("deactive").build());
+        return current;
     }
 
     public static AccountRepository getInstance() {
