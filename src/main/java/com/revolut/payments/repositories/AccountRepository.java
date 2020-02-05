@@ -8,12 +8,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 public class AccountRepository {
-    private static AccountRepository instance;
     private static final List<Account> MEMORY_STORE = new CopyOnWriteArrayList<>();
 
-    private AccountRepository() {}
+    public AccountRepository() {}
 
     public Account fetchOne(final int id) {
+        if (id > MEMORY_STORE.size()) {
+            return null;
+        }
         return MEMORY_STORE.get(id-1);
     }
 
@@ -35,32 +37,27 @@ public class AccountRepository {
                 .setStatus("active")
                 .setBalance(request.getBalance())
                 .build();
-        MEMORY_STORE.add(id, account);
+        MEMORY_STORE.set(id-1, account);
         return account;
     }
 
     public Account update(final Account updated) {
-        final Account current = MEMORY_STORE.get(updated.getId());
-        if (current == null) {
+        if (updated.getId() > MEMORY_STORE.size()) {
             return null;
         }
-        MEMORY_STORE.add(updated.getId(), updated);
-        return current;
+        return MEMORY_STORE.set(updated.getId()-1, updated);
     }
 
     public Account delete(final int id) {
-        final Account current = MEMORY_STORE.get(id);
-        if (current == null) {
+        if (id > MEMORY_STORE.size()) {
             return null;
         }
-        MEMORY_STORE.add(id, new Account.Builder(current).setStatus("deactive").build());
+        final Account current = MEMORY_STORE.get(id-1);
+        MEMORY_STORE.set(id-1, new Account.Builder(current).setStatus("deactive").build());
         return current;
     }
 
-    public static AccountRepository getInstance() {
-        if (instance == null) {
-            instance = new AccountRepository();
-        }
-        return instance;
+    void clearStore() {
+        MEMORY_STORE.clear();
     }
 }

@@ -8,7 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 public abstract class Controller {
     public ResponseDTO handle(final RequestDTO requestDTO)  {
         try {
-            return (ResponseDTO) this.getClass().getDeclaredMethod(requestDTO.getMethod(), RequestDTO.class).invoke(this, requestDTO);
+            return (ResponseDTO) Controller.class.getDeclaredMethod(requestDTO.getMethod(), RequestDTO.class).invoke(this, requestDTO);
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             return null;
         }
@@ -29,7 +29,7 @@ public abstract class Controller {
     }
 
     protected ResponseDTO put(final RequestDTO request) {
-        if (StringUtils.isBlank(request.getUrlParam()) || !request.hasQueryParam("balance")) {
+        if (StringUtils.isBlank(request.getUrlParam()) || !request.hasBodyParam("balance")) {
             return null;
         }
         return update(request);

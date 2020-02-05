@@ -11,25 +11,55 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.List;
 
 public class TransferController extends Controller {
-    private static TransferController instance;
     private AccountRepository accountRepository;
     private TransferRepository transferRepository;
 
-    public TransferController() {
-        accountRepository = AccountRepository.getInstance();
-        transferRepository = TransferRepository.getInstance();
+    public TransferController(final AccountRepository accountRepository, final TransferRepository transferRepository) {
+        this.accountRepository = accountRepository;
+        this.transferRepository = transferRepository;
+    }
+
+    @Override
+    protected ResponseDTO getMany(final RequestDTO requestDTO) {
+        final TransferRequestDTO transferRequest = new TransferRequestDTO.Builder()
+                .addFilter("status", requestDTO.getQueryParam("status"))
+                .addFilter("source", requestDTO.getQueryParam("source"))
+                .addFilter("destination", requestDTO.getQueryParam("destination"))
+                .addFilter("transaction", requestDTO.getQueryParam("transaction"))
+                .build();
+        final List<Transfer> transfers = transferRepository.fetchMany(transferRequest);
+        return new ResponseDTO.Builder()
+                .setHttpStatus(200)
+                .setBody(transfers)
+                .build();
+    }
+
+    @Override
+    protected ResponseDTO getById(final RequestDTO requestDTO) {
+        final Transfer transfer = transferRepository.fetchOne(Integer.parseInt(requestDTO.getUrlParam()));
+        if (transfer == null) {
+            return new ResponseDTO.Builder()
+                    .setHttpStatus(404)
+                    .setBody("Resource not found")
+                    .build();
+        }
+        return new ResponseDTO.Builder()
+                .setHttpStatus(200)
+                .setBody(transfer)
+                .build();
     }
 
     @Override
     protected ResponseDTO create(final RequestDTO requestDTO) {
         final TransferRequestDTO transferRequest = new TransferRequestDTO.Builder()
-                .setSourceId(String.valueOf(requestDTO.getBodyParam("source")))
-                .setTransaction(String.valueOf(requestDTO.getBodyParam("transaction")))
-                .setDestinationId(String.valueOf(requestDTO.getBodyParam("destination")))
+                .setSourceId((String) requestDTO.getBodyParam("source"))
+                .setTransaction((String) requestDTO.getBodyParam("transaction"))
+                .setDestinationId((String) requestDTO.getBodyParam("destination"))
                 .build();
-        if (StringUtils.isBlank(transferRequest.getSourceId())
-            || StringUtils.isBlank(transferRequest.getTransaction())
-            || StringUtils.isBlank(transferRequest.getDestinationId())) {
+        if (StringUtils.isBlank(transferRequest.getSourceId()) || !StringUtils.isNumeric(transferRequest.getSourceId())
+            || StringUtils.isBlank(transferRequest.getTransaction()) || !StringUtils.isNumeric(transferRequest.getTransaction())
+            || StringUtils.isBlank(transferRequest.getDestinationId()) || !StringUtils.isNumeric(transferRequest.getDestinationId())
+            || transferRequest.getSourceId().equals(transferRequest.getDestinationId())) {
             return new ResponseDTO.Builder()
                     .setHttpStatus(400)
                     .setBody("Bad Request")
@@ -72,36 +102,6 @@ public class TransferController extends Controller {
     }
 
     @Override
-    protected ResponseDTO getMany(final RequestDTO requestDTO) {
-        final TransferRequestDTO transferRequest = new TransferRequestDTO.Builder()
-                .addFilter("status", requestDTO.getQueryParam("status"))
-                .addFilter("source", requestDTO.getQueryParam("source"))
-                .addFilter("destination", requestDTO.getQueryParam("destination"))
-                .addFilter("transaction", requestDTO.getQueryParam("transaction"))
-                .build();
-        final List<Transfer> transfers = transferRepository.fetchMany(transferRequest);
-        return new ResponseDTO.Builder()
-                .setHttpStatus(200)
-                .setBody(transfers)
-                .build();
-    }
-
-    @Override
-    protected ResponseDTO getById(final RequestDTO requestDTO) {
-        final Transfer transfer = transferRepository.fetchOne(Integer.parseInt(requestDTO.getUrlParam()));
-        if (transfer == null) {
-            return new ResponseDTO.Builder()
-                    .setHttpStatus(404)
-                    .setBody("Resource not found")
-                    .build();
-        }
-        return new ResponseDTO.Builder()
-                .setHttpStatus(200)
-                .setBody(transfer)
-                .build();
-    }
-
-    @Override
     protected ResponseDTO deactivate(final RequestDTO requestDTO) {
         final Transfer transfer = transferRepository.fetchOne(Integer.parseInt(requestDTO.getUrlParam()));
         if (transfer == null) {
@@ -110,21 +110,23 @@ public class TransferController extends Controller {
                     .setBody("Resource not found")
                     .build();
         }
-        create(new RequestDTO()
+        if ("rollback".equals(transfer.getStatus())) {
+            return new ResponseDTO.Builder()
+                    .setHttpStatus(409)
+                    .setBody("Transaction has already been rollback.")
+                    .build();
+        }
+        final ResponseDTO rollbackResponse = create(new RequestDTO()
                 .addBodyParam("source", transfer.getDestinationId())
                 .addBodyParam("transaction", transfer.getTransaction())
                 .addBodyParam("destination", transfer.getSourceId()));
+        if (rollbackResponse.getHttpStatus() != 201) {
+            return rollbackResponse;
+        }
         transferRepository.delete(transfer.getId());
         return new ResponseDTO.Builder()
                 .setHttpStatus(202)
                 .setBody(transfer)
                 .build();
-    }
-
-    public static TransferController getInstance() {
-        if (instance == null) {
-            instance = new TransferController();
-        }
-        return instance;
     }
 }

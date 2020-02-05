@@ -10,10 +10,9 @@ import java.util.List;
 
 public class AccountController extends Controller {
     private AccountRepository repository;
-    private static AccountController instance;
 
-    private AccountController() {
-        repository = AccountRepository.getInstance();
+    public AccountController(final AccountRepository repository) {
+        this.repository = repository;
     }
 
     @Override
@@ -49,7 +48,7 @@ public class AccountController extends Controller {
         final AccountRequestDTO accountRequest = new AccountRequestDTO.Builder()
                 .setBalance((String) requestDTO.getBodyParam("balance"))
                 .build();
-        if (StringUtils.isBlank(accountRequest.getBalance())) {
+        if (StringUtils.isBlank(accountRequest.getBalance()) || !StringUtils.isNumeric(accountRequest.getBalance())) {
             return new ResponseDTO.Builder()
                     .setHttpStatus(400)
                     .setBody("Bad Request")
@@ -68,6 +67,12 @@ public class AccountController extends Controller {
                 .setId(Integer.parseInt(requestDTO.getUrlParam()))
                 .setBalance((String) requestDTO.getBodyParam("balance"))
                 .build();
+        if (StringUtils.isBlank(accountRequest.getBalance()) || !StringUtils.isNumeric(accountRequest.getBalance())) {
+            return new ResponseDTO.Builder()
+                    .setHttpStatus(400)
+                    .setBody("Bad Request")
+                    .build();
+        }
         final Account account = repository.update(accountRequest);
         if (account == null) {
             return new ResponseDTO.Builder()
@@ -94,12 +99,5 @@ public class AccountController extends Controller {
                 .setHttpStatus(202)
                 .setBody(account)
                 .build();
-    }
-
-    public static AccountController getInstance() {
-        if (instance == null) {
-            instance = new AccountController();
-        }
-        return instance;
     }
 }

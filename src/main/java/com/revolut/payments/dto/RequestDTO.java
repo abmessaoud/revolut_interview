@@ -44,6 +44,10 @@ public class RequestDTO {
         return body.get(key);
     }
 
+    public boolean hasBodyParam(final String key) {
+        return body.containsKey(key);
+    }
+
     public RequestDTO addBodyParam(final String key, final Object value) {
         this.body.put(key, value);
         return this;
